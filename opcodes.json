@@ -1,6 +1,107 @@
 {
-    "ADD A": "34",
-    "ADD 84": "56",
-    "LOAD FROM ADDR": "AB",
-    "NOP": "00"
+    "FUSE": {
+        "opcode": "00000",
+        "format": "RR"
+    },
+    "DRAIN": {
+        "opcode": "00001",
+        "format": "RR"
+    },
+    "RISE": {
+        "opcode": "00010",
+        "format": "R"
+    },
+    "FALL": {
+        "opcode": "00011",
+        "format": "R"
+    },
+    "JUDGE": {
+        "opcode": "00100",
+        "format": "RR"
+    },
+    "AND": {
+        "opcode": "00101",
+        "format": "RR"
+    },
+    "OR": {
+        "opcode": "00110",
+        "format": "RR"
+    },
+    "XOR": {
+        "opcode": "00111",
+        "format": "RR"
+    },
+
+    "SUMMON": {
+        "opcode": "01000",
+        "format": "RR"
+    },
+    "SEAL": {
+        "opcode": "01001",
+        "format": "RR"
+    },
+    "MIRROR": {
+        "opcode": "01010",
+        "format": "RR"
+    },
+
+    "ENCHANT": {
+        "opcode": "01011",
+        "format": "EXT"
+    },
+
+    "WARP": {
+        "opcode": "10000",
+        "format": "BRANCH"
+    },
+    "WARPZ": {
+        "opcode": "10001",
+        "format": "BRANCH"
+    },
+    "WARPNZ": {
+        "opcode": "10010",
+        "format": "BRANCH"
+    },
+    "WARPC": {
+        "opcode": "10011",
+        "format": "BRANCH"
+    },
+    "WARPNC": {
+        "opcode": "10100",
+        "format": "BRANCH"
+    },
+    "INVOKE": {
+        "opcode": "10101",
+        "format": "BRANCH"
+    },
+
+    "RETURN": {
+        "opcode": "10110",
+        "format": "NONE"
+    },
+
+    "NOT": {
+        "opcode": "11000",
+        "format": "R"
+    },
+
+    "SHL": {
+        "opcode": "11001",
+        "format": "SHIFT"
+    },
+
+    "SHR": {
+        "opcode": "11010",
+        "format": "SHIFT"
+    },
+
+    "IDLE": {
+        "opcode": "11100",
+        "format": "NONE"
+    },
+
+    "FREEZE": {
+        "opcode": "11101",
+        "format": "NONE"
+    }
 }

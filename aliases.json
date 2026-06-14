@@ -1,0 +1,24 @@
+{
+    "ADD": "FUSE",
+    "SUB": "DRAIN",
+    "INC": "RISE",
+    "DEC": "FALL",
+    "CMP": "JUDGE",
+
+    "LOAD": "SUMMON",
+    "STORE": "SEAL",
+    "MOV": "MIRROR",
+    "LOADI": "ENCHANT",
+
+    "JMP": "WARP",
+    "JZ": "WARPZ",
+    "JNZ": "WARPNZ",
+    "JC": "WARPC",
+    "JNC": "WARPNC",
+
+    "CALL": "INVOKE",
+    "RET": "RETURN",
+
+    "NOP": "IDLE",
+    "HALT": "FREEZE"
+}
