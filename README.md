@@ -1,12 +1,13 @@
-# SYNTH-16 Assembler
+# SYNTH-16 Custom Processor & Assembler
 
-A two-pass assembler for the **SYNTH-16** custom 16-bit ISA. Reads a `.asm` source file and produces hex and binary machine code output files, ready to be loaded into a SYNTH-16 CPU implementation or simulator.
+A custom 16-bit computer architecture project, including **modular Verilog RTL CPU designs** and a **two-pass assembler** built in Python.
 
 ---
 
 ## Table of Contents
 
 - [Project Structure](#project-structure)
+- [Hardware Architecture](#hardware-architecture-verilog-rtl)
 - [ISA Overview](#isa-overview)
 - [Instruction Encoding](#instruction-encoding)
 - [Instruction Formats](#instruction-formats)
@@ -25,15 +26,32 @@ A two-pass assembler for the **SYNTH-16** custom 16-bit ISA. Reads a `.asm` sour
 
 ```
 project16/
-├── assembler.py      # Main assembler — two-pass, label-aware
-├── opcodes.json      # Instruction definitions (opcode bits + format)
-├── aliases.json      # Friendly aliases for native mnemonics
-├── program.asm       # Sample program: first 10 Fibonacci numbers
-├── program.hex       # Output: one 16-bit word per line, hex
-├── program.bin       # Output: one 16-bit word per line, binary
-├── result.txt        # Debug / scratch binary output
-└── resulthex.txt     # Debug / scratch hex output
+├── assembler.py                  # Main assembler — two-pass, label-aware
+├── opcodes.json                  # Instruction definitions (opcode bits + format)
+├── aliases.json                  # Friendly aliases for native mnemonics
+├── cpu_top.v                     # CPU FSM Root Module (Verilog RTL)
+├── control_flow_module.v         # Control Flow execution unit (Verilog RTL)
+├── data_movement_module.v        # Data Movement execution unit (Verilog RTL)
+├── control_flow_documentation.md # Hardware doc for control flow
+├── data_movement_documentation.md# Hardware doc for data movement
+├── program.asm                   # Sample program: first 10 Fibonacci numbers
+├── program.hex                   # Output: one 16-bit word per line, hex
+├── program.bin                   # Output: one 16-bit word per line, binary
+├── result.txt                    # Debug / scratch binary output
+└── resulthex.txt                 # Debug / scratch hex output
 ```
+
+---
+
+## Hardware Architecture (Verilog RTL)
+
+The SYNTH-16 CPU is designed with a modular hierarchy to isolate concerns between instruction fetching, execution control, and memory/register interfacing:
+
+* **CPU FSM Root ([cpu_top.v](./cpu_top.v))**: Owns the program counter (`PC`), stack pointer (`SP`), register file (`regfile`), and flags. It implements the primary `FETCH` / `DECODE` / `EXECUTE` pipeline state machine.
+* **Data Movement Module ([data_movement_module.v](./data_movement_module.v))**: Implements memory loading/storing (`LOAD`/`STORE` / `SUMMON`/`SEAL`), register copies (`MOV` / `MIRROR`), and 16-bit immediate loading (`LOADI` / `ENCHANT`).
+  * See the [Data Movement Documentation](./data_movement_documentation.md) for timing details and interface ports.
+* **Control Flow Module ([control_flow_module.v](./control_flow_module.v))**: Implements branch operations including unconditional/conditional jumps and subroutine calls/returns (`JMP`, `JZ`, `JNZ`, `JC`, `JNC`, `CALL`, `RET`).
+  * See the [Control Flow Documentation](./control_flow_documentation.md) for condition checks and stack timing diagrams.
 
 ---
 
