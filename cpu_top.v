@@ -24,8 +24,6 @@ module cpu_top
     reg[2:0] state;
     wire[4:0] opcode;
     wire mode_bit;
-    wire [2:0] rd_addr;
-    wire [2:0] rs_addr;
     wire [4:0] imm;
     reg[2:0] next_state;        // This was not defined in microarch spec
 
@@ -39,7 +37,7 @@ module cpu_top
     // some constants enum-
     localparam FETCH = 2'd0;
     localparam DECODE = 2'd1;
-    localparam FETCH_EXT = 2'd2;
+    localparam FETCH_ext = 2'd2;
     localparam EXECUTE = 2'd3;
 
 
@@ -91,6 +89,9 @@ module cpu_top
 
 
 
+
+
+    wire[15:0] ram_rd_data; 
     // WHenever I have state = FETCH, i need to fetch value at [PC] and so on
     always @(posedge clk)
     begin
@@ -128,16 +129,16 @@ module cpu_top
     // To be connected with ports of RAM-
     wire ram_wr_enable;                      // is defined here depedning on whether EU is enabled and is requesting for ram write
     wire[14:0] ram_wr_addr;              // is being driven by EU, no need to define this
-    reg[15:0] ram_wr_data;               // is being driven by EU
+    wire[15:0] ram_wr_data;               // is being driven by EU
     wire[14:0] ram_rd_addr;             // is defined here depending on state, whether PC address or EU address
-    reg[15:0] ram_rd_data;              // is being driven by ram, so no need to define this
+    //wire[15:0] ram_rd_data;              is defined above as its required to read data in ram
     
 
     wire ram_wr_en;             // will be driven by EU module
     assign ram_wr_enable = (state == EXECUTE) && (ram_wr_en);
 
-    wire exec_ram_rd_addr[14:0]; // will be driven by EU module
-    assign ram_rd_addr = (state == FETCH) ? PC : exec_rd_addr;
+    wire[14:0] exec_ram_rd_addr; // will be driven by EU module
+    assign ram_rd_addr = (state == FETCH) ? PC : exec_ram_rd_addr;
 
     ram myRam(.clk(clk), .we(ram_wr_enable), .rd_addr(ram_rd_addr), .wr_addr(ram_wr_addr), .din(ram_rd_data), .dout(ram_wr_data));
 
@@ -147,7 +148,7 @@ module cpu_top
 
     
     // i. READ REGISTER-
-    wire rs_addr, rd_addr;      // is driven by EU
+    // rd_addr and rs_addr is driven by IR and is assigned above.
     wire rs_data, rd_data;       
     assign rs_data = regfile[rs_addr];          // constantly reading register data
     assign rd_data = regfile[rd_addr];          // constantly reading register data
@@ -156,9 +157,9 @@ module cpu_top
     // ii. Write Register-
     wire reg_wr_en;                         // driven by EU
     wire reg_wr_enable;                     // assigned here ensure that EU is active, and register wants to wrte data   
-    assugn reg_wr_enable =  (state == EXECUTE) & (reg_wr_en);
+    assign reg_wr_enable =  (state == EXECUTE) & (reg_wr_en);
     wire reg_wr_addr;                       // driven by EU
-    reg_wr_data;                            // driven by EU
+    wire reg_wr_data;                            // driven by EU
 
     // iii. Reading of Flags, SP, PC is being done constantly
 
@@ -216,9 +217,7 @@ module cpu_top
     // it will just pass the "request", and will recieve response, cpu will just look at the response and ensure that execution module is enabled
 
 
-    // wires and reg-
-    wire rd_addr;
-    wire rs_addr;
+    /*
 
     
     // Instatitate Execution MODULE-
@@ -263,7 +262,7 @@ module cpu_top
 
     
 
-
+*/
 
 
 
