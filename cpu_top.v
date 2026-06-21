@@ -15,19 +15,19 @@ module cpu_top
     reg[14:0] SP = 15'h7FFF;
     reg[15:0] IR;
     reg[15:0] IR_ext;
-    reg[2:0] FLAGS;
+    reg[1:0] FLAGS;
     reg[15:0] regfile[7:0];
     
 
 
     // Required by Execution Module and for working of FSM
-    reg[2:0] state;
+    reg[1:0] state;
     wire[4:0] opcode;
     wire[2:0] rd_addr;
     wire[2:0] rs_addr;
     wire mode_bit;
-    wire [4:0] imm;
-    reg[2:0] next_state;        // This was not defined in microarch spec
+    wire [3:0] imm;
+    reg[1:0] next_state;        // This was not defined in microarch spec
 
 
     
@@ -59,14 +59,47 @@ module cpu_top
     always @(posedge clk or posedge rst)
     begin
         if(rst)
-            begin
             state <= FETCH;
-            PC <= 15'h0000;
-            SP <= 15'h7FFF;
-            end
-        else
+        else if(!halt)
             state <= next_state;
     end
+
+
+
+    // THis block writes to PC (depending on reset condition) and also updates PC to jump to next address
+    wire[15:0] ram_rd_data; 
+    always @(posedge clk or posedge rst)
+    begin
+        if(rst)
+        begin
+            PC <= 15'h0000;
+        end
+
+        else if(PC_wr_enable)
+        begin
+            PC <= PC_wr_data;
+        end
+
+        else
+        begin
+            case(state)
+
+                FETCH:
+                begin
+                    IR <= ram_rd_data;
+                    PC <= PC + 1;
+                end
+
+                FETCH_ext:
+                begin
+                    IR_ext <= ram_rd_data;
+                    PC <= PC + 1;
+                end
+
+            endcase
+        end
+    end
+
 
 
     // This block is responsible for defininng the change-
@@ -85,6 +118,9 @@ module cpu_top
             
             EXECUTE:
                 next_state = DECODE;
+
+            default:
+                next_state = FETCH;
         endcase
     end
     
@@ -93,23 +129,6 @@ module cpu_top
 
 
 
-    wire[15:0] ram_rd_data; 
-    // WHenever I have state = FETCH, i need to fetch value at [PC] and so on
-    always @(posedge clk)
-    begin
-        case(state)
-            FETCH:
-                begin
-                IR <= ram_rd_data;
-                PC <= PC+1;
-                end
-            FETCH_ext:
-                begin
-                IR_ext <= ram_rd_data;
-                PC <= PC+1;
-                end
-        endcase
-    end
 
 
 
@@ -140,9 +159,17 @@ module cpu_top
     assign ram_wr_enable = (state == EXECUTE) && (ram_wr_en);
 
     wire[14:0] exec_ram_rd_addr; // will be driven by EU module
-    assign ram_rd_addr = (state == FETCH) ? PC : exec_ram_rd_addr;
+    assign ram_rd_addr = (state == FETCH || state == FETCH_ext) ? PC : exec_ram_rd_addr;
 
-    ram myRam(.clk(clk), .we(ram_wr_enable), .rd_addr(ram_rd_addr), .wr_addr(ram_wr_addr), .din(ram_rd_data), .dout(ram_wr_data));
+    ram myRam
+    (
+        .clk(clk), 
+        .we(ram_wr_enable), 
+        .rd_addr(ram_rd_addr), 
+        .wr_addr(ram_wr_addr), 
+        .din(ram_wr_data), 
+        .dout(ram_rd_data)
+    );
 
 
 
@@ -179,28 +206,34 @@ module cpu_top
     wire[14:0] SP_wr_data;          // driven by EU
 
 
-    always @(posedge clk)
+    always @(posedge clk or posedge rst)
     begin
-        if(reg_wr_enable)
+        if(rst)
         begin
-            regfile[rd_addr] <= reg_wr_data;        // always write to rd, destination register
+            SP <= 15'h7FFF;
+            FLAGS <= 2'b00;
         end
 
-        if(flag_wr_enable)
+        else
         begin
-            FLAGS <= flag_wr_data;
-        end
+            if(reg_wr_enable)
+            begin
+                regfile[rd_addr] <= reg_wr_data;
+            end
 
-        if(PC_wr_enable)
-        begin
-            PC <= PC_wr_data;
-        end
+            if(flag_wr_enable)
+            begin
+                FLAGS <= flag_wr_data;
+            end
 
-        if(SP_wr_enable)
-        begin
-            SP <= SP_wr_data;
+            if(SP_wr_enable)
+            begin
+                SP <= SP_wr_data;
+            end
         end
     end
+
+
 
 
     
@@ -227,7 +260,6 @@ module cpu_top
     
     // Instatitate Execution MODULE-
     execution_unit eu(
-        .clk(clk), 
         .opcode(opcode), 
         .mode_bit(mode_bit), 
         .rd_addr(rd_addr), 
@@ -254,7 +286,9 @@ module cpu_top
         .ram_rd_addr(exec_ram_rd_addr),
         .ram_wr_en(ram_wr_en),
         .ram_wr_addr(ram_wr_addr),
-        .ram_wr_data(ram_wr_data)
+        .ram_wr_data(ram_wr_data),
+
+        .halt(halt)
     );
     
 
