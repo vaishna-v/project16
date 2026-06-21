@@ -23,6 +23,8 @@ module cpu_top
     // Required by Execution Module and for working of FSM
     reg[2:0] state;
     wire[4:0] opcode;
+    wire[2:0] rd_addr;
+    wire[2:0] rs_addr;
     wire mode_bit;
     wire [4:0] imm;
     reg[2:0] next_state;        // This was not defined in microarch spec
@@ -149,7 +151,8 @@ module cpu_top
     
     // i. READ REGISTER-
     // rd_addr and rs_addr is driven by IR and is assigned above.
-    wire rs_data, rd_data;       
+    wire[15:0] rs_data;
+    wire[15:0] rd_data;       
     assign rs_data = regfile[rs_addr];          // constantly reading register data
     assign rd_data = regfile[rd_addr];          // constantly reading register data
 
@@ -158,8 +161,8 @@ module cpu_top
     wire reg_wr_en;                         // driven by EU
     wire reg_wr_enable;                     // assigned here ensure that EU is active, and register wants to wrte data   
     assign reg_wr_enable =  (state == EXECUTE) & (reg_wr_en);
-    wire reg_wr_addr;                       // driven by EU
-    wire reg_wr_data;                            // driven by EU
+                                            // wire reg_wr_addr;  is not required as it is same as rd_addr, (destination register)s
+    wire[15:0] reg_wr_data;                            // driven by EU
 
     // iii. Reading of Flags, SP, PC is being done constantly
 
@@ -171,14 +174,16 @@ module cpu_top
     assign SP_wr_enable = (state == EXECUTE) & (SP_wr_en);
     assign PC_wr_enable = (state == EXECUTE) & (PC_wr_en);
 
-    wire flag_wr_data, PC_wr_data, SP_wr_data;          // driven by EU
+    wire[1:0] flag_wr_data;
+    wire[14:0] PC_wr_data;
+    wire[14:0] SP_wr_data;          // driven by EU
 
 
     always @(posedge clk)
     begin
         if(reg_wr_enable)
         begin
-            regfile[reg_wr_addr] <= reg_wr_data;
+            regfile[rd_addr] <= reg_wr_data;        // always write to rd, destination register
         end
 
         if(flag_wr_enable)
@@ -217,15 +222,12 @@ module cpu_top
     // it will just pass the "request", and will recieve response, cpu will just look at the response and ensure that execution module is enabled
 
 
-    /*
+    
 
     
     // Instatitate Execution MODULE-
-    execution_unit eu
-    (
+    execution_unit eu(
         .clk(clk), 
-
-
         .opcode(opcode), 
         .mode_bit(mode_bit), 
         .rd_addr(rd_addr), 
@@ -239,7 +241,6 @@ module cpu_top
         .FLAGS_in(FLAGS), 
 
         .reg_wr_en(reg_wr_en),
-        .reg_wr_addr(reg_wr_addr),
         .reg_wr_data(reg_wr_data),
         .flag_wr_en(flag_wr_en),
         .flag_wr_data(flag_wr_data),
@@ -250,10 +251,10 @@ module cpu_top
     
         
         .ram_rd_data(ram_rd_data), 
-        .ram_wr_enable(ram_wr_en), 
-        .ram_wr_data(ram_wr_data), 
-        
-        .halt_out()
+        .ram_rd_addr(exec_ram_rd_addr),
+        .ram_wr_en(ram_wr_en),
+        .ram_wr_addr(ram_wr_addr),
+        .ram_wr_data(ram_wr_data)
     );
     
 
@@ -262,7 +263,7 @@ module cpu_top
 
     
 
-*/
+
 
 
 
