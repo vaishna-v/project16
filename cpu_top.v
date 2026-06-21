@@ -2,39 +2,45 @@ module cpu_top
 (
     input clk,
     input rst,
-
-    output ram_wr_en,
-    output[14:0] ram_wr_addr,               // driven by execution module directly
-    output[15:0] ram_wr_data,
-
-    output[14:0] ram_rd_addr,               // will change depending on state, PC for (fetch) otherwise driven by exec module   
-    input[15:0] ram_rd_data,
-
     output halt
 );
 
 
+
+    // --------------------------------------------------------Definin some important registers and wire for cpu working -----------------------------------
+
+
+    // CPU MEMORY-
     reg[14:0] PC = 15'h0000;       // Program Counter is 15 bit 
     reg[14:0] SP = 15'h7FFF;
     reg[15:0] IR;
     reg[15:0] IR_ext;
     reg[2:0] FLAGS;
     reg[15:0] regfile[7:0];
+    
+
+
+    // Required by Execution Module and for working of FSM
     reg[2:0] state;
     wire[4:0] opcode;
     wire mode_bit;
     wire [2:0] rd_addr;
     wire [2:0] rs_addr;
     wire [4:0] imm;
-    wire ex_en;                 // wasn't define in spec
     reg[2:0] next_state;        // This was not defined in microarch spec
+
+
     
 
+
+
+
+    // ---------------------------------------------------------- FSM ------------------------------------------------------------------
     // some constants enum-
-    localparam FETCH = 2'd1;
-    localparam DECODE = 2'd2;
-    localparam FETCH_EXT = 2'd3;
-    localparam EXECUTE = 2'4;
+    localparam FETCH = 2'd0;
+    localparam DECODE = 2'd1;
+    localparam FETCH_EXT = 2'd2;
+    localparam EXECUTE = 2'd3;
 
 
 
@@ -44,7 +50,6 @@ module cpu_top
     assign rd_addr = IR[9:7];
     assign rs_addr = IR[6:4];
     assign imm = IR[3:0];
-    assign ex_en = state == EXECUTE;
     
     
      
@@ -91,30 +96,172 @@ module cpu_top
     begin
         case(state)
             FETCH:
+                begin
                 IR <= ram_rd_data;
                 PC <= PC+1;
+                end
             FETCH_ext:
+                begin
                 IR_ext <= ram_rd_data;
                 PC <= PC+1;
+                end
         endcase
     end
+
+
+
+
+
+
+
+
+
+
+    // ------------------------------------------------------- RW MODULE -------------------------------------------------------------------------------
+
+
+
+                    //                  1. For RAM-
+
+
+    // Update 1: Ram is being instansiated by cpu instead of other way round
+    // To be connected with ports of RAM-
+    wire ram_wr_enable;                      // is defined here depedning on whether EU is enabled and is requesting for ram write
+    wire[14:0] ram_wr_addr;              // is being driven by EU, no need to define this
+    reg[15:0] ram_wr_data;               // is being driven by EU
+    wire[14:0] ram_rd_addr;             // is defined here depending on state, whether PC address or EU address
+    reg[15:0] ram_rd_data;              // is being driven by ram, so no need to define this
     
 
-    // I need to define some more modules which definitely were not present in the original specification
-    // As of now, I am sure that there is some easy way with writing less code however i will just go with what i am thinking
+    wire ram_wr_en;             // will be driven by EU module
+    assign ram_wr_enable = (state == EXECUTE) && (ram_wr_en);
 
-    // Issue 1: ram_rd_addr will be equal to PC? Or will it be equal whatever execution model wants to read???
-    // SOlution 1: depending on (state) i will let ram_rd_addr to be eq ual to either PC or execution model request ( call it exec_ram_rd_addr ), and ram_wr_addr can always be driven by exec
-
-    wire exec_ram_rd_addr[14:0];
+    wire exec_ram_rd_addr[14:0]; // will be driven by EU module
     assign ram_rd_addr = (state == FETCH) ? PC : exec_rd_addr;
 
+    ram myRam(.clk(clk), .we(ram_wr_enable), .rd_addr(ram_rd_addr), .wr_addr(ram_wr_addr), .din(ram_rd_data), .dout(ram_wr_data));
 
 
 
-    // ISSUE 2: In architecture, RW Module is defined to be a separate module, but i believe it should exist directly inside cpu fsm
-    // .... to be defined
+                //                      2. For Registers, Flags, PC, SP-
 
+    
+    // i. READ REGISTER-
+    wire rs_addr, rd_addr;      // is driven by EU
+    wire rs_data, rd_data;       
+    assign rs_data = regfile[rs_addr];          // constantly reading register data
+    assign rd_data = regfile[rd_addr];          // constantly reading register data
+
+
+    // ii. Write Register-
+    wire reg_wr_en;                         // driven by EU
+    wire reg_wr_enable;                     // assigned here ensure that EU is active, and register wants to wrte data   
+    assugn reg_wr_enable =  (state == EXECUTE) & (reg_wr_en);
+    wire reg_wr_addr;                       // driven by EU
+    reg_wr_data;                            // driven by EU
+
+    // iii. Reading of Flags, SP, PC is being done constantly
+
+    //  iv. Write Flags, SP, PC-
+    wire flag_wr_en, SP_wr_en, PC_wr_en;            // driven by EU
+    wire flag_wr_enable, SP_wr_enable, PC_wr_enable;        // defined here
+
+    assign flag_wr_enable = (state == EXECUTE) & (flag_wr_en);
+    assign SP_wr_enable = (state == EXECUTE) & (SP_wr_en);
+    assign PC_wr_enable = (state == EXECUTE) & (PC_wr_en);
+
+    wire flag_wr_data, PC_wr_data, SP_wr_data;          // driven by EU
+
+
+    always @(posedge clk)
+    begin
+        if(reg_wr_enable)
+        begin
+            regfile[reg_wr_addr] <= reg_wr_data;
+        end
+
+        if(flag_wr_enable)
+        begin
+            FLAGS <= flag_wr_data;
+        end
+
+        if(PC_wr_enable)
+        begin
+            PC <= PC_wr_data;
+        end
+
+        if(SP_wr_enable)
+        begin
+            SP <= SP_wr_data;
+        end
+    end
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+    // --------------------------------------------------- EU MODULE INSTANSIATION ------------------------------------------------------------    
+
+    // I made few changes in execution module
+    // instead of passing whether the request is from arithmetic register, or control flow register
+    // it will just pass the "request", and will recieve response, cpu will just look at the response and ensure that execution module is enabled
+
+
+    // wires and reg-
+    wire rd_addr;
+    wire rs_addr;
+
+    
+    // Instatitate Execution MODULE-
+    execution_unit eu
+    (
+        .clk(clk), 
+
+
+        .opcode(opcode), 
+        .mode_bit(mode_bit), 
+        .rd_addr(rd_addr), 
+        .rs_addr(rs_addr), 
+        .rd_data(rd_data),
+        .rs_data(rs_data),
+        .imm(imm), 
+        .IR_ext(IR_ext), 
+        .PC_in(PC), 
+        .SP_in(SP), 
+        .FLAGS_in(FLAGS), 
+
+        .reg_wr_en(reg_wr_en),
+        .reg_wr_addr(reg_wr_addr),
+        .reg_wr_data(reg_wr_data),
+        .flag_wr_en(flag_wr_en),
+        .flag_wr_data(flag_wr_data),
+        .PC_wr_en(PC_wr_en),
+        .PC_wr_data(PC_wr_data),
+        .SP_wr_en(SP_wr_en),
+        .SP_wr_data(SP_wr_data),
+    
+        
+        .ram_rd_data(ram_rd_data), 
+        .ram_wr_enable(ram_wr_en), 
+        .ram_wr_data(ram_wr_data), 
+        
+        .halt_out()
+    );
+    
+
+
+
+
+    
 
 
 
@@ -129,7 +276,6 @@ endmodule
 
 /*
 
-1. No mention of ex_en --> Used to ensure that execution module can only write to ram when it is active
 2. No mention of next_state
 3. NO mention of exec_ram_rd_addr --> Used to ensure that ram_rd_addr = 
 */
