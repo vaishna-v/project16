@@ -32,6 +32,19 @@ module execution_unit
         
 );
 
+    // --------------------------------------------------------------- Defining important wires --------------------------------------------------------------------
     
+            // wires to denote which wire is enable-
+    wire arith_enable;
+    wire cf_enable;
+    wire dm_enable;
+    wire sys_enable;
+
+
+            // 1. For arith module-
+    wire arith_reg_enable;
+    wire arith_reg_read;
+    wire arith_;
+
 
 endmodule
