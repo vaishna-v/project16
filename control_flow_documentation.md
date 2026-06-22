@@ -1,6 +1,6 @@
 # SYNTH-16 Control Flow Module Documentation
 
-This document describes the design, port interfaces, internal states, and instruction-by-instruction execution flow of the **Control Flow Module** (`control_flow_module`) for the SYNTH-16 custom 16-bit processor, referencing the SYNTH-16 Microarchitecture Specification.
+This document describes the design, port interfaces, internal states, and instruction-by-instruction execution flow of the **Control Flow Module** (`control_flow_module`) for the SYNTH-16 custom 16-bit processor, referencing the updated combinational microarchitecture specifications.
 
 ---
 
@@ -8,7 +8,10 @@ This document describes the design, port interfaces, internal states, and instru
 
 The [control_flow_module](./control_flow_module.v) is responsible for executing instructions that change the sequential program flow, such as unconditional jumps, conditional jumps, subroutine calls, and returns.
 
-All branching target addresses are 16-bit words fetched as the second word of a variable-length instruction (mode_bit = 1). This module does not interact with the general-purpose register file, and only accesses external RAM for stack operations during `CALL` and `RET`.
+Unlike the previous multi-cycle design, **all instructions are completed in a single execution cycle** because:
+* Stack reading during `RET` is executed asynchronously via the RAM's combinational output `ram_rd_data` when `ram_rd_addr` is set to the current stack pointer `SP_in`.
+* Stack writing during `CALL` is executed in a single cycle where the decremented stack pointer (`SP_in - 1`) and return address (`PC_in`) are output combinationally, writing to RAM on the positive clock edge at the end of the `EXECUTE` state.
+* The module has **no clock, reset, or phase registers**. It is a **purely combinational block**.
 
 It implements the following instructions:
 * **WARP (JMP)** (Opcode `10000`): Jumps unconditionally to target address in `IR_ext`.
@@ -23,90 +26,55 @@ It implements the following instructions:
 
 ## 2. Port Configuration
 
-Below is the port structure for [control_flow_module](./control_flow_module.v).
-
-> [!NOTE]
-> In the official SYNTH-16 Microarchitecture Specification, the Control Flow Module is described as outputting GPR and flag interfaces (e.g. `cf_reg_enable`, `cf_flag_enable`, etc.) that are hardwired to 0. In the implemented RTL code, these unused ports have been optimized away for clarity.
-
-### 2.1 Implemented Verilog Ports
+Below is the port structure for [control_flow_module](./control_flow_module.v). It is connected as a sub-module of the `execution_unit`.
 
 | Port Name | Width | Direction | Description |
 | :--- | :---: | :---: | :--- |
-| `clk` | 1 | Input | System clock (active-high). |
-| `rst` | 1 | Input | Synchronous system reset (active-high). |
-| `cf_en` | 1 | Input | Enable signal asserted by the Execute module when a control flow instruction is active. |
 | `opcode` | 5 | Input | The 5-bit instruction opcode from `IR[15:11]`. |
-| `IR_ext` | 16 | Input | The 16-bit target branch address from the second instruction word. |
+| `PC_in` | 15 | Input | The current Program Counter (`PC`) from `cpu_top`. |
+| `SP_in` | 15 | Input | The current Stack Pointer (`SP`) from `cpu_top`. |
 | `FLAGS_in` | 2 | Input | The current CPU flags: `FLAGS_in[1]` = Zero (Z), `FLAGS_in[0]` = Carry (C). |
-| `PC_in` | 16 | Input | The current Program Counter (`PC`) from `cpu_top`. |
-| `SP_in` | 16 | Input | The current Stack Pointer (`SP`) from `cpu_top`. |
-| `ram_rd_data` | 16 | Input | Data read back from external RAM (used by RET). |
-| `cf_ram_enable` | 1 | Output | Asserted high to request RAM access for stack operations. |
-| `cf_ram_addr` | 15 | Output | 15-bit address sent to RAM (derived from `SP_in`). |
-| `cf_ram_read` | 1 | Output | Asserted high to read the return address from the stack during RET. |
-| `cf_ram_write` | 1 | Output | Asserted high to push the return address onto the stack during CALL. |
-| `cf_ram_data` | 16 | Output | Return address data (current `PC_in`) to write to memory. |
-| `cf_pc_write` | 1 | Output | Asserted high to update the Program Counter. |
-| `cf_pc_data` | 16 | Output | New Program Counter value to load into `PC`. |
-| `cf_sp_write` | 1 | Output | Asserted high to update the Stack Pointer. |
-| `cf_sp_data` | 16 | Output | New Stack Pointer value to load into `SP`. |
+| `IR_ext` | 16 | Input | The 16-bit target branch address from the second instruction word. |
+| `ram_rd_data` | 16 | Input | Data read back asynchronously from external RAM (used by RET). |
+| `PC_wr_en` | 1 | Output | Asserted high to write a new value into the Program Counter. |
+| `PC_wr_data` | 15 | Output | New Program Counter value to load into `PC` on the rising clock edge. |
+| `SP_wr_en` | 1 | Output | Asserted high to write a new value into the Stack Pointer. |
+| `SP_wr_data` | 15 | Output | New Stack Pointer value to load into `SP` on the rising clock edge. |
+| `ram_wr_en` | 1 | Output | Asserted high to request RAM write (writes on the clock edge). |
+| `ram_wr_addr` | 15 | Output | 15-bit address sent to RAM for stack push operations (CALL). |
+| `ram_wr_data` | 16 | Output | Return address data (current `PC_in`) to write to memory. |
+| `ram_rd_addr` | 15 | Output | 15-bit address sent to RAM to pop the return address asynchronously (RET). |
 
 ---
 
-## 3. Internal Wires & Registers
+## 3. Instruction Execution Flow
 
-* **`branch_taken`** (1-bit wire): Combinational evaluation of condition flags against the instruction type:
-  * `JMP` (`10000`), `CALL` (`10101`), `RET` (`10110`): Always taken (`1'b1`).
-  * `JZ` (`10001`): Evaluates to `FLAGS_in[1]` (True if Zero flag set).
-  * `JNZ` (`10010`): Evaluates to `~FLAGS_in[1]` (True if Zero flag clear).
-  * `JC` (`10011`): Evaluates to `FLAGS_in[0]` (True if Carry flag set).
-  * `JNC` (`10100`): Evaluates to `~FLAGS_in[0]` (True if Carry flag clear).
-* **`phase`** (1-bit register): Manages sequencing for 2-cycle instructions (`CALL` and `RET`).
-  * `phase = 1'b0`: Cycle 1 (memory stack access).
-  * `phase = 1'b1`: Cycle 2 (register update for `PC` and `SP`).
+Since the module is combinational, all outputs are driven instantaneously from the inputs in a single cycle.
 
----
+### 3.1 Jumps (JMP/JZ/JNZ/JC/JNC)
+Checks flags combinational:
+* Unconditional `JMP` is always taken.
+* Conditional jumps are taken if their flag condition is met.
+* If taken: `PC_wr_en = 1'b1` and `PC_wr_data = IR_ext[14:0]`.
 
-## 4. Instruction Execution Flow
+### 3.2 CALL (INVOKE)
+Branches the Program Counter and pushes the return address (`PC_in`) onto the stack in the same clock cycle:
+* `SP_wr_en = 1'b1` and `SP_wr_data = SP_in - 15'd1`
+* `ram_wr_en = 1'b1`, `ram_wr_addr = SP_in - 15'd1`, and `ram_wr_data = {1'b0, PC_in}`
+* `PC_wr_en = 1'b1` and `PC_wr_data = IR_ext[14:0]`
 
-### 4.1 Jumps (JMP/JZ/JNZ/JC/JNC) — 1 Cycle
-Jump instructions complete in a single execution cycle.
-* **Cycle 1**:
-  * The module combinationally evaluates `branch_taken`.
-  * If `branch_taken == 1'b1`: Assert `cf_pc_write = 1'b1` and set `cf_pc_data = IR_ext` to overwrite the PC.
-  * If `branch_taken == 0'b0`: No signals are asserted. The CPU FSM resumes sequential execution.
-
-### 4.2 CALL (INVOKE) — 2 Cycles
-Subroutine calls execute in two cycles to allow stack modification and PC branching.
-* **Cycle 1 (Phase 0)**:
-  * Decrement Stack Pointer: Set `cf_sp_write = 1'b1` and `cf_sp_data = SP_in - 16'd1`.
-  * Push Return Address: Assert `cf_ram_enable = 1'b1` and `cf_ram_write = 1'b1`.
-  * Set RAM write address to `cf_ram_addr = SP_in[14:0] - 15'd1` and write data to `cf_ram_data = PC_in` (points to the instruction following the CALL).
-  * At the rising clock edge, `phase` toggles to `1'b1`.
-* **Cycle 2 (Phase 1)**:
-  * Overwrite Program Counter: Assert `cf_pc_write = 1'b1` and set `cf_pc_data = IR_ext` to branch to the target subroutine.
-  * At the rising clock edge, `phase` returns to `1'b0`.
-
-### 4.3 RET (RETURN) — 2 Cycles
-Subroutine returns execute in two cycles to read the return address from RAM and restore the caller's context.
-* **Cycle 1 (Phase 0)**:
-  * Pop Return Address request: Assert `cf_ram_enable = 1'b1` and `cf_ram_read = 1'b1`.
-  * Set RAM address to the top of the stack: `cf_ram_addr = SP_in[14:0]`.
-  * At the rising clock edge, `phase` toggles to `1'b1`.
-* **Cycle 2 (Phase 1)**:
-  * Overwrite Program Counter: Assert `cf_pc_write = 1'b1` and set `cf_pc_data = ram_rd_data` (the return address fetched from RAM).
-  * Increment Stack Pointer: Assert `cf_sp_write = 1'b1` and set `cf_sp_data = SP_in + 16'd1`.
-  * At the rising clock edge, `phase` returns to `1'b0`.
+### 3.3 RET (RETURN)
+Pops the return address from the top of the stack asynchronously and updates the Program Counter and Stack Pointer:
+* `ram_rd_addr = SP_in`
+* `PC_wr_en = 1'b1` and `PC_wr_data = ram_rd_data[14:0]` (fetched asynchronously in the same cycle)
+* `SP_wr_en = 1'b1` and `SP_wr_data = SP_in + 15'd1`
 
 ---
 
-## 5. CPU Integration
+## 4. CPU Integration
 
-To connect the [control_flow_module](./control_flow_module.v) inside [cpu_top.v](./cpu_top.v):
+To connect the [control_flow_module](./control_flow_module.v) inside [execution_unit.v](./execution_unit.v):
 
-1. **Instantiation**: Instantiate the module, routing control lines like `cf_en`, `opcode`, `IR_ext`, `FLAGS_in`, `PC_in`, `SP_in`, and `ram_rd_data`.
-2. **FSM Phase Stalling**: The FSM in `cpu_top` must be updated to remain in the `EXECUTE` state for two cycles during `CALL` or `RET` instructions. `cf_en` must remain high during both execution cycles.
-3. **RAM Interface Multiplexing**: When `cf_en` is high, route `cf_ram_addr`, `cf_ram_read`, `cf_ram_write`, and `cf_ram_data` to the external RAM interface.
-4. **PC/SP Multiplexing**: Integrate `cf_pc_write` and `cf_sp_write` to overwrite `PC` and `SP` registers in the root module:
-   * `PC <= (cf_en && cf_pc_write) ? cf_pc_data[14:0] : PC;`
-   * `SP <= (cf_en && cf_sp_write) ? cf_sp_data[14:0] : SP;`
+1. **Instantiation**: Instantiate the module inside `execution_unit.v`, mapping its control and status signals.
+2. **CPU-Level Writes**: The CPU FSM (`cpu_top.v`) receives the write requests and writes data to `PC` (if `PC_wr_en` is high) or `SP` (if `SP_wr_en` is high) on the positive clock edge at the end of the `EXECUTE` state.
+3. **RAM Interface Multiplexing**: If `cf_active` is asserted, the `execution_unit` routes `ram_rd_addr`, `ram_wr_en`, `ram_wr_addr`, and `ram_wr_data` from this module to the top-level RAM ports.

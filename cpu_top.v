@@ -117,7 +117,7 @@ module cpu_top
                 next_state = EXECUTE;
             
             EXECUTE:
-                next_state = DECODE;
+                next_state = FETCH;
 
             default:
                 next_state = FETCH;
