@@ -67,6 +67,8 @@ module cpu_top
 
 
     // THis block writes to PC (depending on reset condition) and also updates PC to jump to next address
+    wire PC_wr_enable;
+    wire[14:0] PC_wr_data;
     wire[15:0] ram_rd_data; 
     always @(posedge clk or posedge rst)
     begin
@@ -159,7 +161,7 @@ module cpu_top
     assign ram_wr_enable = (state == EXECUTE) && (ram_wr_en);
 
     wire[14:0] exec_ram_rd_addr; // will be driven by EU module
-    assign ram_rd_addr = (state == FETCH || state == FETCH_ext) ? PC : exec_ram_rd_addr;
+    assign ram_rd_addr = (state != EXECUTE) ? PC : exec_ram_rd_addr;
 
     ram myRam
     (
@@ -195,14 +197,13 @@ module cpu_top
 
     //  iv. Write Flags, SP, PC-
     wire flag_wr_en, SP_wr_en, PC_wr_en;            // driven by EU
-    wire flag_wr_enable, SP_wr_enable, PC_wr_enable;        // defined here
+    wire flag_wr_enable, SP_wr_enable;        // defined here
 
     assign flag_wr_enable = (state == EXECUTE) & (flag_wr_en);
     assign SP_wr_enable = (state == EXECUTE) & (SP_wr_en);
     assign PC_wr_enable = (state == EXECUTE) & (PC_wr_en);
 
     wire[1:0] flag_wr_data;
-    wire[14:0] PC_wr_data;
     wire[14:0] SP_wr_data;          // driven by EU
 
 

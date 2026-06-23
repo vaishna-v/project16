@@ -37,13 +37,13 @@ module execution_unit (
     wire cf_active;
     wire sys_active;
 
-    assign arith_active = ((opcode[4:3] == 2'b00) || (opcode[4:2] == 3'b110)) && !halt;
+    assign arith_active = ((opcode[4:3] == 2'b00) || (opcode[4:2] == 3'b110));
 
-    assign dm_active = (opcode[4:3] == 2'b01) && !halt;
+    assign dm_active = (opcode[4:3] == 2'b01);
 
-    assign cf_active = (opcode[4:3] == 2'b10) && !halt;
+    assign cf_active = (opcode[4:3] == 2'b10);
 
-    assign sys_active = (opcode[4:2] == 3'b111) && !halt;
+    assign sys_active = (opcode[4:2] == 3'b111);
 
 
     // ---------------------------------------------------------- Arithmetic Module ----------------------------------------------------------
@@ -53,7 +53,7 @@ module execution_unit (
 
     wire a_flag_wr_en;
     wire [1:0] a_flag_wr_data;
-
+    /*
     arithmetic_module arithmetic_unit
     (
         .opcode(opcode),
@@ -69,7 +69,7 @@ module execution_unit (
         .flag_wr_en(a_flag_wr_en),
         .flag_wr_data(a_flag_wr_data)
     );
-
+    */
 
     // ---------------------------------------------------------- Data Movement Module ----------------------------------------------------------
 
@@ -154,13 +154,13 @@ module execution_unit (
     // ---------------------------------------------------------- System Module ----------------------------------------------------------
 
     wire s_halt;
-
+    
     system_module system_unit
     (
         .opcode(opcode),
         .halt(s_halt)
     );
-
+    
 
     // ---------------------------------------------------------- Register Write ----------------------------------------------------------
 
