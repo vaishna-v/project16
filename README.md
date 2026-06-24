@@ -28,11 +28,13 @@ Implemented:
 * Control Flow Module
 * Instruction Fetch / Decode Logic
 * Assembler
+* Arithmetic Module
+* System Module
 
 In Progress:
 
-* Arithmetic Module
-* System Module
+* refinement and optimization
+* FPGA implementation and testing (upcoming)
 
 ## Documentation
 
@@ -40,15 +42,15 @@ Detailed documentation for individual modules:
 
 * [Data Movement Module](docs/data_movement_documentation.md)
 * [Control Flow Module](docs/control_flow_documentation.md)
-* [Arithmetic Module](docs/arithmetic_documentation.md)
-* [System Module](docs/system_documentation.md)
+* [Arithmetic Module](docs/arithmetic_module_documentation.md)
+* [System Module](docs/system_module_documentation.md)
 
 ## Running
 
 Compile:
 
 ```bash
-iverilog testbench.v cpu_top.v ram.v execution_unit.v data_movement_module.v control_flow_module.v dummy_system_module.v
+iverilog testbench.v cpu_top.v ram.v execution_unit.v arithmetic_module.v data_movement_module.v control_flow_module.v system_module.v
 ```
 
 Run:
@@ -66,13 +68,17 @@ gtkwave cpu.vcd
 ## Example Program
 
 ```asm
-ENCHANT R1, 0x4000
-ENCHANT R2, 0x4001
+ENCHANT R1, 0x0032
+ENCHANT R2, 0x005C
+FUSE R1, R2
+ENCHANT R3, 0x4000
+SEAL R3, R1
 
-SUMMON R3, R1
-SEAL   R2, R3
+ENCHANT R4, 0x4001
+SUMMON R5, R3
+SEAL R4, R5
 
 FREEZE
 ```
 
-This program copies the value stored at address `0x4000` to address `0x4001`.
+This program adds two immediate values (0x0032 and 0x005C) using the ALU, stores the result in memory at address 0x4000, loads it back into a register using SUMMON, and copies it to address 0x4001 before halting the CPU with FREEZE.
