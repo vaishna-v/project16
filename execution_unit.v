@@ -53,7 +53,7 @@ module execution_unit (
 
     wire a_flag_wr_en;
     wire [1:0] a_flag_wr_data;
-    /*
+    
     arithmetic_module arithmetic_unit
     (
         .opcode(opcode),
@@ -69,7 +69,6 @@ module execution_unit (
         .flag_wr_en(a_flag_wr_en),
         .flag_wr_data(a_flag_wr_data)
     );
-    */
 
     // ---------------------------------------------------------- Data Movement Module ----------------------------------------------------------
 
