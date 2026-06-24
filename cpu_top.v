@@ -60,7 +60,7 @@ module cpu_top
     begin
         if(rst)
             state <= FETCH;
-        else if(!halt)
+        else if(!(halt && state == EXECUTE))
             state <= next_state;
     end
 
