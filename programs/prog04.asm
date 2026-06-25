@@ -1,0 +1,24 @@
+; Prog04 - Decrement a Number
+;
+; Input:
+;   VALUE = 100
+;
+; Output:
+;   RESULT = 99
+
+ENCHANT R0, VALUE
+SUMMON R1, R0
+
+FALL R1
+
+ENCHANT R0, RESULT
+SEAL R0, R1
+
+FREEZE
+
+
+VALUE:
+DW 100
+
+RESULT:
+DW 0

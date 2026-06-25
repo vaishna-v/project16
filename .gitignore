@@ -1,3 +1,5 @@
 *.hex
 *.bin
 a.out
+testbench.v
+test.asm

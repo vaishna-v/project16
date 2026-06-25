@@ -1,7 +1,7 @@
 import json
 import re
 
-ASM_FILE = "program.asm"
+ASM_FILE = "test.asm"
 OPCODE_FILE = "opcodes.json"
 ALIAS_FILE = "aliases.json"
 
@@ -509,7 +509,7 @@ with open(BIN_OUT, "w") as f:
         )
 
 
-print("Assembly successful")
+print("\n\nAssembly successful")
 print(f"Generated {len(output_words)} words")
 print(f"Wrote {HEX_OUT}")
-print(f"Wrote {BIN_OUT}")
+print(f"Wrote {BIN_OUT}\n\n\n")

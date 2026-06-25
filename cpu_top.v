@@ -163,7 +163,7 @@ module cpu_top
     wire[14:0] exec_ram_rd_addr; // will be driven by EU module
     assign ram_rd_addr = (state != EXECUTE) ? PC : exec_ram_rd_addr;
 
-    ram myRam
+    ram ram
     (
         .clk(clk), 
         .we(ram_wr_enable), 

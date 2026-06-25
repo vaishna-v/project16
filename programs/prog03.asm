@@ -1,0 +1,24 @@
+; Prog03 - Increment a Number
+;
+; Input:
+;   VALUE = 99
+;
+; Output:
+;   RESULT = 100
+
+ENCHANT R0, VALUE
+SUMMON R1, R0
+
+RISE R1
+
+ENCHANT R0, RESULT
+SEAL R0, R1
+
+FREEZE
+
+
+VALUE:
+DW 99
+
+RESULT:
+DW 0

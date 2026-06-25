@@ -1,0 +1,39 @@
+; Prog05 - Sum of First N Natural Numbers
+;
+; Input:
+;   N = 10
+;
+; Output:
+;   RESULT = 55
+
+ENCHANT R0, N
+SUMMON R1, R0
+
+ENCHANT R2, 0
+ENCHANT R3, 1
+
+LOOP:
+
+JUDGE R3, R1
+WARPC DONE
+
+FUSE R2, R3
+RISE R3
+
+WARP LOOP
+
+DONE:
+
+FUSE R2, R1
+
+ENCHANT R0, RESULT
+SEAL R0, R2
+
+FREEZE
+
+
+N:
+DW 10
+
+RESULT:
+DW 0

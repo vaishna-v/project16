@@ -1,0 +1,46 @@
+; Prog06 - Multiplication Using Repeated Addition
+;
+; Input:
+;   NUM1 = 13
+;   NUM2 = 12
+;
+; Output:
+;   RESULT = 156
+
+ENCHANT R0, NUM1
+SUMMON R1, R0
+
+ENCHANT R0, NUM2
+SUMMON R2, R0
+
+ENCHANT R3, 0
+
+ENCHANT R4, 0
+
+LOOP:
+
+JUDGE R2, R4
+WARPZ DONE
+
+FUSE R3, R1
+
+FALL R2
+
+WARP LOOP
+
+DONE:
+
+ENCHANT R0, RESULT
+SEAL R0, R3
+
+FREEZE
+
+
+NUM1:
+DW 13
+
+NUM2:
+DW 12
+
+RESULT:
+DW 0

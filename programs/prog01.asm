@@ -1,0 +1,31 @@
+; Prog01 - Addition of Two Numbers
+;
+; Input:
+;   NUM1 = 84
+;   NUM2 = 37
+;
+; Output:
+;   RESULT = 121
+
+ENCHANT R0, NUM1
+SUMMON R1, R0
+
+ENCHANT R0, NUM2
+SUMMON R2, R0
+
+FUSE R1, R2
+
+ENCHANT R0, RESULT
+SEAL R0, R1
+
+FREEZE
+
+
+NUM1:
+DW 84
+
+NUM2:
+DW 37
+
+RESULT:
+DW 0
