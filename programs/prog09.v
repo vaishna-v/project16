@@ -1,4 +1,4 @@
-module prog05_tb;
+module prog06_tb;
 
 reg clk = 0;
 reg rst = 1;
@@ -19,8 +19,8 @@ initial begin
 
     wait(halt);
 
-    $display("N      : %0d", uut.ram.mem[18]);
-    $display("RESULT : %0d", uut.ram.mem[19]);
+    $display("NUM   : %0d", uut.ram.mem[31]);
+    $display("FACTORIAL : %0d", uut.ram.mem[32]);
 
     $finish;
 
