@@ -1,0 +1,33 @@
+; Prog04 - Count set bits
+;
+; Input:
+;   NUM = 77
+;
+; Output:
+;   RESULT = 3
+
+ENCHANT R0, NUM
+SUMMON R1, R0
+
+ENCHANT R2, 0
+ENCHANT R3, 16
+
+LOOP:
+SHL R1, 1
+WARPNC SKIP
+RISE R2
+
+SKIP:
+FALL R3
+WARPNZ LOOP
+
+ENCHANT R0, RESULT
+SEAL R0, R2
+FREEZE
+
+
+NUM:
+DW 77
+
+RESULT:
+DW 0
