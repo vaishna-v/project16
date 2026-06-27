@@ -1,84 +1,101 @@
-# Project16
+# Project16: SYNTH-16 Custom 16-Bit Processor
 
-Project16 is a custom 16-bit processor implemented in Verilog.
+Project16 is a custom 16-bit processor (designated **SYNTH-16**) implemented in Verilog. It features a unique, thematic assembly language ("Magical Mnemonic" ISA), a multi-stage FSM control architecture, combinational execution units, and an automated simulation test suite.
 
-The processor uses a multi-cycle architecture consisting of the following stages:
+---
 
-```text
-FETCH → DECODE → FETCH_EXT → EXECUTE
-```
+## 🌟 Architecture & Microarchitecture
 
-Instructions are organized into independent execution modules:
+The SYNTH-16 processor is designed around a word-addressable memory layout with 15-bit address lines (handling up to 32,768 words of RAM).
 
-* Arithmetic
-* Data Movement
-* Control Flow
-* System
+### 1. Instruction Pipeline (FSM States)
+The top-level CPU state machine controls instructions through four primary phases:
+* **FETCH**: Fetches the instruction word from RAM into the Instruction Register (`IR`) and increments the PC.
+* **DECODE**: Decodes the opcode and determines whether a 16-bit immediate extension word is required.
+* **FETCH_EXT**: Fetches the second instruction word containing the 16-bit immediate operand (e.g. for label offsets or full immediates) and increments the PC.
+* **EXECUTE**: Executes the instruction combinationally in a single cycle and updates flags and registers.
 
-An accompanying Python assembler converts assembly programs into machine code that can be loaded into RAM during simulation.
+### 2. Register & Flag File
+* **GPRs**: 8 General Purpose Registers (`R0` through `R7`).
+* **PC & SP**: 15-bit Program Counter and 15-bit Stack Pointer (initialized to `0x7FFF`).
+* **FLAGS**: 2 Status Flags:
+  * **Zero (Z)**: Set if the result of an arithmetic or logical operation is 0.
+  * **Carry/Borrow (C)**: Set on arithmetic overflow or subtraction underflow (borrow).
 
-## Current Progress
+---
 
-Implemented:
+## 🧙‍♂️ The SYNTH-16 "Magical" ISA
 
-* CPU Top Level
-* Register File
-* RAM
-* Data Movement Module
-* Control Flow Module
-* Instruction Fetch / Decode Logic
-* Assembler
-* Arithmetic Module
-* System Module
+The processor features a unique vocabulary of mnemonics mapped to standard operations:
 
-In Progress:
+| Standard Operation | Magical Mnemonic | Description |
+| :--- | :--- | :--- |
+| **ADD** | `FUSE` | Adds Rs to Rd |
+| **SUB** | `DRAIN` | Subtracts Rs from Rd |
+| **INC** | `RISE` | Increments Rd by 1 |
+| **DEC** | `FALL` | Decrements Rd by 1 |
+| **CMP** | `JUDGE` | Compares Rd and Rs (updates flags without writing back) |
+| **MOV** | `MIRROR` | Copies Rs to Rd |
+| **LOADI** | `ENCHANT` | Loads 16-bit immediate value into Rd |
+| **LOAD** | `SUMMON` | Loads value from RAM address in Rs into Rd |
+| **STORE** | `SEAL` | Stores Rs into RAM address in Rd |
+| **JMP** | `WARP` | Unconditional jump |
+| **JZ** | `WARPZ` | Jump if Zero (Z == 1) |
+| **JNZ** | `WARPNZ` | Jump if Not Zero (Z == 0) |
+| **JC** | `WARPC` | Jump if Carry / Borrow (C == 1) |
+| **JNC** | `WARPNC` | Jump if Not Carry / Borrow (C == 0) |
+| **CALL** | `INVOKE` | Pushes return PC to stack and jumps |
+| **RET** | `RETURN` | Pops return address from stack to PC |
+| **HALT** | `FREEZE` | Stops CPU execution |
 
-* refinement and optimization
-* FPGA implementation and testing (upcoming)
+---
 
-## Documentation
+## 📂 Project Structure
 
-Detailed documentation for individual modules:
+* **`cpu_top.v`**: Main FSM state machine routing instruction execution.
+* **`ram.v`**: Word-addressable 32,768 word memory unit featuring asynchronous reads and synchronous writes.
+* **`execution_unit.v`**: Routes control signals and operands between CPU registers and specialized modules.
+* **`arithmetic_module.v`**: ALU module implementing arithmetic and logic (`FUSE`, `DRAIN`, `RISE`, `FALL`, `JUDGE`, `AND`, `OR`, `XOR`, `SHL`, `SHR`).
+* **`data_movement_module.v`**: Registers and RAM data transfer module (`MIRROR`, `ENCHANT`, `SUMMON`, `SEAL`).
+* **`control_flow_module.v`**: Jump, Branch, Subroutine call, and return logic (`WARP`, `WARPZ`, `WARPNZ`, `WARPC`, `WARPNC`, `INVOKE`, `RETURN`).
+* **`assembler.py`**: A custom assembler written in Python that translates SYNTH-16 assembly (`.asm`) into binary machine codes (`program.hex`/`program.bin`).
 
-* [Data Movement Module](docs/data_movement_documentation.md)
-* [Control Flow Module](docs/control_flow_documentation.md)
-* [Arithmetic Module](docs/arithmetic_module_documentation.md)
-* [System Module](docs/system_module_documentation.md)
+---
 
-## Running
+## 📋 Catalog of Test Programs (`/programs`)
 
-Compile:
+* **`prog01.asm` - `prog08.asm`**: Standard functional checks for arithmetic operations, conditional jumps, logical expressions, and basic data movements.
+* **`prog09.asm`**: Factorial calculation using multiplication via repeated addition.
+* **`prog10.asm`**: Fibonacci sequence computation (calculates the N-th Fibonacci number).
+* **`prog11.asm`**: Primality test for two separate numbers sequentially using an elegant loop-over-array approach.
+* **`prog12.asm`**: Greatest Common Divisor (GCD) using the Euclidean subtraction algorithm.
 
+---
+
+## 🚀 How to Run Simulations
+
+### Automated Suite
+You can execute any test program by running the automated script at the root:
 ```bash
-iverilog testbench.v cpu_top.v ram.v execution_unit.v arithmetic_module.v data_movement_module.v control_flow_module.v system_module.v
+python tester.py
 ```
+*Enter the program number when prompted (e.g. `11` or `12`).*
 
-Run:
-
-```bash
-vvp a.out
-```
-
-View waveforms:
-
-```bash
-gtkwave cpu.vcd
-```
-
-## Example Program
-
-```asm
-ENCHANT R1, 0x0032
-ENCHANT R2, 0x005C
-FUSE R1, R2
-ENCHANT R3, 0x4000
-SEAL R3, R1
-
-ENCHANT R4, 0x4001
-SUMMON R5, R3
-SEAL R4, R5
-
-FREEZE
-```
-
-This program adds two immediate values (0x0032 and 0x005C) using the ALU, stores the result in memory at address 0x4000, loads it back into a register using SUMMON, and copies it to address 0x4001 before halting the CPU with FREEZE.
+### Manual Execution
+1. Copy the target files to root name:
+   ```bash
+   cp programs/prog12.asm test.asm
+   cp programs/prog12.v testbench.v
+   ```
+2. Assemble the program:
+   ```bash
+   python assembler.py
+   ```
+3. Compile with Icarus Verilog:
+   ```bash
+   iverilog testbench.v cpu_top.v ram.v execution_unit.v arithmetic_module.v data_movement_module.v control_flow_module.v system_module.v
+   ```
+4. Run the simulator:
+   ```bash
+   vvp a.out
+   ```
