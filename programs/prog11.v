@@ -19,10 +19,10 @@ initial begin
 
     wait(halt);
 
-    $display("NUM1    : %0d", uut.ram.mem[47]);
-    $display("RESULT1 : %0d", uut.ram.mem[49]);
-    $display("NUM2    : %0d", uut.ram.mem[48]);
-    $display("RESULT2 : %0d", uut.ram.mem[50]);
+    $display("NUM1    : %0d", uut.ram.mem[46]);
+    $display("RESULT1 : %0d", uut.ram.mem[48]);
+    $display("NUM2    : %0d", uut.ram.mem[47]);
+    $display("RESULT2 : %0d", uut.ram.mem[49]);
 
     $finish;
 
