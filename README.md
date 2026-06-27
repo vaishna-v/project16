@@ -69,6 +69,7 @@ The processor features a unique vocabulary of mnemonics mapped to standard opera
 * **`prog10.asm`**: Fibonacci sequence computation (calculates the N-th Fibonacci number).
 * **`prog11.asm`**: Primality test for two separate numbers sequentially using an elegant loop-over-array approach.
 * **`prog12.asm`**: Greatest Common Divisor (GCD) using the Euclidean subtraction algorithm.
+* **`prog13.asm`**: Least Common Multiple (LCM) using running multiples (repeated addition).
 
 ---
 
